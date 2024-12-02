@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外出登記表</title>
+    <style>
+        /* 設定整個頁面 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Microsoft JhengHei", sans-serif; /* 微軟正黑體 */
+        }
+
+        /* 表格樣式 */
+        table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 25px; /* 調整儲存格大小 */
+            text-align: center;
+            font-size: 70px; /* 字體大小 */
+        }
+
+        th {
+            background-color: #0056b3; /* 標題行底色：藍色 */
+            color: white; /* 標題文字顏色：白色 */
+        }
+
+        td[contenteditable="true"] {
+            background-color: #f9f9f9; /* 可編輯儲存格背景色 */
+        }
+
+        /* 提交按鈕 */
+        .submit-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background-color: #003d80;
+        }
+    </style>
+</head>
+<body>
+    <table id="editableTable">
+        <thead>
+            <tr>
+                <th>姓名</th>
+                <th>外出時間</th>
+                <th>回來時間</th>
+                <th>地點</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td contenteditable="true">卓王勛</td>
+                <td contenteditable="true">11/28</td>
+                <td contenteditable="true">11/29</td>
+                <td contenteditable="true">休</td>
+            </tr>
+            <tr>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+                <td contenteditable="true"></td>
+            </tr>
+        </tbody>
+    </table>
+    <button class="submit-btn" onclick="submitData()">提交資料</button>
+
+    <script>
+        // 提交資料到後端
+        function submitData() {
+            const table = document.getElementById("editableTable");
+            const rows = table.rows;
+            const data = [];
+
+            for (let i = 1; i < rows.length; i++) { // 跳過表頭
+                const cells = rows[i].cells;
+                const rowData = {};
+                rowData["姓名"] = cells[0].innerText;
+                rowData["外出時間"] = cells[1].innerText;
+                rowData["回來時間"] = cells[2].innerText;
+                rowData["地點"] = cells[3].innerText;
+                data.push(rowData);
+            }
+
+            // 發送 POST 請求到伺服器
+            fetch('http://localhost:3000/api/data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert('資料提交成功！');
+                console.log(result);
+            })
+            .catch(error => {
+                console.error('發生錯誤：', error);
+                alert('提交失敗，請稍後再試。');
+            });
+        }
+    </script>
+</body>
+</html>
