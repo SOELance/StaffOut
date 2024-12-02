@@ -5,50 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>外出登記表</title>
     <style>
-        /* 設定整個頁面 */
         html, body {
             margin: 0;
             padding: 0;
             height: 100%;
-            font-family: "Microsoft JhengHei", sans-serif; /* 微軟正黑體 */
+            font-family: "Microsoft JhengHei", sans-serif;
         }
 
-        /* 表格樣式 */
         table {
             width: 100%;
-            height: 100%;
             border-collapse: collapse;
         }
 
         th, td {
             border: 1px solid #ccc;
-            padding: 25px; /* 調整儲存格大小 */
+            padding: 10px;
             text-align: center;
-            font-size: 70px; /* 字體大小 */
         }
 
         th {
-            background-color: #0056b3; /* 標題行底色：藍色 */
-            color: white; /* 標題文字顏色：白色 */
+            background-color: #0056b3;
+            color: white;
         }
 
         td[contenteditable="true"] {
-            background-color: #f9f9f9; /* 可編輯儲存格背景色 */
-        }
-
-        /* 提交按鈕 */
-        .submit-btn {
-            margin: 20px;
-            padding: 10px 20px;
-            font-size: 20px;
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        .submit-btn:hover {
-            background-color: #003d80;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
@@ -63,12 +44,7 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td contenteditable="true">卓王勛</td>
-                <td contenteditable="true">11/28</td>
-                <td contenteditable="true">11/29</td>
-                <td contenteditable="true">休</td>
-            </tr>
+            <!-- 預設空行供輸入 -->
             <tr>
                 <td contenteditable="true"></td>
                 <td contenteditable="true"></td>
@@ -77,43 +53,78 @@
             </tr>
         </tbody>
     </table>
-    <button class="submit-btn" onclick="submitData()">提交資料</button>
 
     <script>
-        // 提交資料到後端
-        function submitData() {
+        // 獲取表格資料
+        function getTableData() {
             const table = document.getElementById("editableTable");
-            const rows = table.rows;
-            const data = [];
+            const rows = table.querySelectorAll("tbody tr");
+            return Array.from(rows).map(row => {
+                const cells = row.querySelectorAll("td");
+                return {
+                    name: cells[0].innerText.trim(),
+                    outTime: cells[1].innerText.trim(),
+                    backTime: cells[2].innerText.trim(),
+                    location: cells[3].innerText.trim()
+                };
+            });
+        }
 
-            for (let i = 1; i < rows.length; i++) { // 跳過表頭
-                const cells = rows[i].cells;
-                const rowData = {};
-                rowData["姓名"] = cells[0].innerText;
-                rowData["外出時間"] = cells[1].innerText;
-                rowData["回來時間"] = cells[2].innerText;
-                rowData["地點"] = cells[3].innerText;
-                data.push(rowData);
-            }
-
-            // 發送 POST 請求到伺服器
-            fetch('http://localhost:3000/api/data', {
-                method: 'POST',
+        // 自動同步資料到後端
+        function syncData() {
+            const data = getTableData();
+            fetch("http://localhost:3000/api/data", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify(data)
             })
-            .then(response => response.json())
-            .then(result => {
-                alert('資料提交成功！');
-                console.log(result);
+            .then(response => {
+                if (!response.ok) {
+                    console.error("同步失敗，伺服器回應：", response.statusText);
+                }
             })
-            .catch(error => {
-                console.error('發生錯誤：', error);
-                alert('提交失敗，請稍後再試。');
+            .catch(error => console.error("同步過程中發生錯誤：", error));
+        }
+
+        // 監聽所有可編輯儲存格的變動
+        function enableAutoSync() {
+            const table = document.getElementById("editableTable");
+            table.addEventListener("input", () => {
+                syncData();
             });
         }
+
+        // 從後端獲取資料並填充到表格中
+        function fetchData() {
+            fetch("http://localhost:3000/api/data")
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector("#editableTable tbody");
+                    tableBody.innerHTML = ""; // 清空表格
+                    data.forEach(row => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td contenteditable="true">${row.name || ""}</td>
+                            <td contenteditable="true">${row.outTime || ""}</td>
+                            <td contenteditable="true">${row.backTime || ""}</td>
+                            <td contenteditable="true">${row.location || ""}</td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
+
+                    // 確保新填充的表格行啟用自動同步
+                    enableAutoSync();
+                })
+                .catch(error => console.error("獲取資料時發生錯誤：", error));
+        }
+
+        // 初始化
+        window.onload = () => {
+            fetchData();
+            enableAutoSync();
+        };
     </script>
 </body>
 </html>
